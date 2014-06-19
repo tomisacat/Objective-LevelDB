@@ -77,7 +77,7 @@ NSString * const kLevelDBChangeValue        = @"value";
 NSString * const kLevelDBChangeKey          = @"key";
 
 LevelDBOptions MakeLevelDBOptions() {
-    return (LevelDBOptions) {true, true, false, false, true, 0, 0};
+    return (LevelDBOptions) {true, false, false, false, true, 0, 0};
 }
 
 @interface LDBSnapshot ()
@@ -206,6 +206,22 @@ LevelDBOptions MakeLevelDBOptions() {
 
 #pragma mark - Setters
 
+- (void)setData:(NSData *)data forKey:(NSString *)key
+{
+    AssertDBExists(db);
+    AssertKeyType(key);
+    NSParameterAssert(data != nil);
+    
+    leveldb::Slice k = SliceFromString(key);
+    leveldb::Slice v = leveldb::Slice((char *)[data bytes], [data length]);
+    
+    leveldb::Status status = db->Put(writeOptions, k, v);
+    
+    if (!status.ok()) {
+        NSLog(@"wrong %s", status.ToString().c_str());
+    }
+}
+
 - (void) setObject:(id)value forKey:(id)key {
     AssertDBExists(db);
     AssertKeyType(key);
@@ -245,6 +261,24 @@ LevelDBOptions MakeLevelDBOptions() {
 }
 
 #pragma mark - Getters
+
+- (NSData *)dataForKey:(NSString *)key
+{
+    AssertDBExists(db);
+    AssertKeyType(key);
+    std::string v_string;
+    leveldb::Slice k = SliceFromString(key);
+    leveldb::Status status = db->Get(readOptions, k, &v_string);
+    
+    if (!status.ok()) {
+        if (!status.IsNotFound()) {
+            NSLog(@"problem happen for key %@ from database: %s", key, status.ToString().c_str());
+            return nil;
+        }
+    }
+    
+    return [NSData dataWithBytes:(const void*)v_string.c_str() length:v_string.length()];
+}
 
 - (id) objectForKey:(id)key {
     return [self objectForKey:key withSnapshot:nil];
@@ -528,6 +562,7 @@ LevelDBOptions MakeLevelDBOptions() {
             break;
         
         LevelDBKey lk = GenericKeyFromSlice(lkey);
+#warning 如果获取allKeys有问题可能是这里
         id v = (predicate == nil) ? nil : DecodeFromSlice(iter->value(), &lk, _decoder);
         iterate(&lk, v, &stop);
         if (stop) break;

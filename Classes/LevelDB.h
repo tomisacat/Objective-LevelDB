@@ -154,6 +154,8 @@ NSData   * NSDataFromLevelDBKey  (LevelDBKey * key);
  */
 - (void) setObject:(id)value forKey:(id)key;
 
+- (void)setData:(NSData *)data forKey:(NSString *)key;
+
 /**
  Same as `[self setObject:forKey:]`
  */
@@ -186,6 +188,8 @@ NSData   * NSDataFromLevelDBKey  (LevelDBKey * key);
  @param key The key to retrieve from the database
  */
 - (id) objectForKey:(id)key;
+
+- (NSData *)dataForKey:(NSString *)key;
 
 /**
  Same as `[self objectForKey:]`
